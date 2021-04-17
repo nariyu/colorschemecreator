@@ -1,0 +1,22 @@
+.notifyContainer {
+  position: fixed;
+  z-index: 8000;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 1rem;
+  pointer-events: none;
+
+  &.closed {
+    animation: disappear 0.3s ease-out 0s forwards;
+    > * {
+      pointer-events: none;
+    }
+  }
+}
+
+@keyframes disappear {
+  to {
+    transform: translate(0, -100%);
+  }
+}
