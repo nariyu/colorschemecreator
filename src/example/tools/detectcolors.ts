@@ -1,7 +1,12 @@
 import { rgb2int } from 'shared/utils/colorutil';
 
 export const createColorScheme = (
-  image: HTMLImageElement,
+  image:
+    | HTMLImageElement
+    | HTMLVideoElement
+    | HTMLCanvasElement
+    | ImageBitmap
+    | OffscreenCanvas,
   defaultBackgroundColor = '#fff',
 ) => {
   // これらの色を見つけます
@@ -39,7 +44,7 @@ export const createColorScheme = (
   const imageData = context.getImageData(0, 0, sw, sh).data;
 
   // 1. 背景色を決定
-  // なんかいろいろやったけど結局左上のピクセルの色を使うことにする
+  // 雑だけど 1x1 の画像にリサイズして色をとります。中央付近の色になるっぽい。
   backgroundColor = (() => {
     const canvas = document.createElement('canvas');
     canvas.width = 1;
@@ -69,16 +74,11 @@ export const createColorScheme = (
   // 背景色との明度差が一番大きいもの
   textColor = (() => {
     let textColor = 0x000000;
-    const stepX = Math.max(1, dw / 30); // 全部捜査すると膨大になるから間引く
-    const stepY = Math.max(1, dh / 30);
-
-    for (let x = 0; x < dw; x += stepX) {
-      for (let y = 0; y < dh; y += stepY) {
+    for (let x = 0; x < dw; x += 1) {
+      for (let y = 0; y < dh; y += 1) {
         const color = getPixel(imageData, dw, x, y);
         colors.push(color);
-
         const brightness = calculateBrightness(color);
-
         if (
           maxBrightDistance == -1 ||
           Math.abs(backgroundBrightness - brightness) > maxBrightDistance

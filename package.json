@@ -1,6 +1,6 @@
 {
   "name": "colorschemecreator",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "env-cmd -r .env.js -e local next dev",
