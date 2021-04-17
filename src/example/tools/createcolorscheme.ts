@@ -15,8 +15,8 @@ export const createColorScheme = (
   const sw = source.width;
   const sh = source.height;
 
-  // 処理しやすいように最大150x150にリサイズする
-  const scale = Math.min(1, Math.min(150 / sw, 150 / sh));
+  // 処理しやすいように最大500x500にリサイズする
+  const scale = Math.min(1, Math.min(500 / sw, 500 / sh));
 
   // 作業用画像の幅と高さ
   const dw = Math.floor(sw * scale);
@@ -50,7 +50,7 @@ export const createColorScheme = (
   // 1. 背景色を決定
   // 雑だけど小さくリサイズして左上の色をとります。
   backgroundColor = (() => {
-    const size = 5;
+    const size = 7;
     const canvas = document.createElement('canvas');
     canvas.width = size;
     canvas.height = size;
@@ -79,8 +79,13 @@ export const createColorScheme = (
   // 背景色との明度差が一番大きいものを抽出する
   textColor = (() => {
     let textColor = 0x000000;
-    for (let x = 0; x < dw; x += 3) {
-      for (let y = 0; y < dh; y += 3) {
+
+    // 全部捜査すると膨大になるから間引く
+    const stepX = Math.max(1, dw / 20);
+    const stepY = Math.max(1, dh / 20);
+
+    for (let x = 0; x < dw; x += stepX) {
+      for (let y = 0; y < dh; y += stepY) {
         const color = getPixel(destImageData, dw, x, y);
         colors.push(color);
 
