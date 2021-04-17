@@ -74,10 +74,12 @@
   margin: 1rem 0;
   padding: 0.5rem 0.8rem;
   line-height: 1.5;
+  font-size: 0.8rem;
   border: 1px solid rgba(#000, 0.3);
   background-color: rgba(#000, 0.7);
   border: 1px solid rgba(#fff, 0.5);
   color: #fff;
+  text-align: left;
 }
 
 @media screen and (max-width: 500px) {
