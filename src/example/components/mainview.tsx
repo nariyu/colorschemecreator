@@ -76,7 +76,7 @@ export const MainView = () => {
     return `linear-gradient(${
       process.browser && windowSize.width > 500 ? 90 : 180
     }deg, rgba(${bgR}, ${bgG}, ${bgB}, 1), rgba(${bgR}, ${bgG}, ${bgB}, 0))`;
-  }, [backgroundColor]);
+  }, [backgroundColor, windowSize]);
 
   return (
     <div
