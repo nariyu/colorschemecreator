@@ -73,7 +73,7 @@ export const createColorScheme = (
   const colors: number[] = [];
 
   // 最大明度差
-  let maxBrightDistance = -1;
+  let textBrightDistance = -1;
 
   // 2. テキスト色を決定
   // 背景色との明度差が一番大きいものを抽出する
@@ -91,10 +91,10 @@ export const createColorScheme = (
 
         const brightness = calculateBrightness(color);
         if (
-          maxBrightDistance == -1 ||
-          Math.abs(backgroundBrightness - brightness) > maxBrightDistance
+          textBrightDistance == -1 ||
+          Math.abs(backgroundBrightness - brightness) > textBrightDistance
         ) {
-          maxBrightDistance = Math.abs(backgroundBrightness - brightness);
+          textBrightDistance = Math.abs(backgroundBrightness - brightness);
           textColor = color;
         }
       }
@@ -129,9 +129,9 @@ export const createColorScheme = (
 
         if (
           brightnessDistance >
-            maxBrightDistance * (defaultBrightnessThreshold - threshold) &&
+            textBrightDistance * defaultBrightnessThreshold &&
           brightnessDistance <
-            maxBrightDistance * (defaultBrightnessThreshold + threshold)
+            textBrightDistance * (defaultBrightnessThreshold + threshold)
         ) {
           titleColor = color;
           titleColorMatched = true;
