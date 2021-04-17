@@ -39,7 +39,6 @@ export const hsv2rgb = (h: number, s: number, v: number) => {
 };
 
 export const rgb2int = (r: number, g: number, b: number) =>
-  // tslint:disable-next-line: no-bitwise
   (r << 16) + (g << 8) + b;
 
 export const rgb2hex = (r: number, g: number, b: number) =>

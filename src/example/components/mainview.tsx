@@ -1,4 +1,4 @@
-import { createColorScheme } from 'example/tools/detectcolors';
+import { createColorScheme } from 'example/tools/createcolorscheme';
 import { useCallback, useEffect, useState } from 'react';
 import { disassemblyColor } from 'shared/utils/colorutil';
 import { blobToImage } from 'shared/utils/imageutil';

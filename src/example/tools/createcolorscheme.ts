@@ -1,5 +1,3 @@
-import { rgb2int } from 'shared/utils/colorutil';
-
 export const createColorScheme = (
   image:
     | HTMLImageElement
@@ -19,8 +17,8 @@ export const createColorScheme = (
   const sw = image.width;
   const sh = image.height;
 
-  // 処理しやすいように最大200x200にリサイズする
-  const scale = Math.min(1, Math.min(200 / sw, 200 / sh));
+  // 処理しやすいように最大150x150にリサイズする
+  const scale = Math.min(1, Math.min(150 / sw, 150 / sh));
 
   // 作業用画像の幅と高さ
   const dw = Math.floor(sw * scale);
@@ -32,7 +30,8 @@ export const createColorScheme = (
   canvas.height = dh;
   const context = canvas.getContext('2d') as CanvasRenderingContext2D;
 
-  // 白で塗りつぶす
+  // defaultBackgroundColorで塗りつぶす
+  // 透明かもしれないからね
   context.fillStyle = defaultBackgroundColor;
   context.beginPath();
   context.rect(0, 0, dw, dh);
@@ -41,23 +40,25 @@ export const createColorScheme = (
 
   // canvas に転写
   context.drawImage(image, 0, 0, sw, sh, 0, 0, dw, dh);
-  const imageData = context.getImageData(0, 0, sw, sh).data;
+  const sourceImageData = context.getImageData(0, 0, dw, dh).data;
+  const destImageData = Uint8ClampedArray.from(sourceImageData);
+  posterize(sourceImageData, destImageData, dw, dh, 5);
 
   // 1. 背景色を決定
-  // 雑だけど 1x1 の画像にリサイズして色をとります。中央付近の色になるっぽい。
+  // 雑だけど小さくリサイズして左上の色をとります。
   backgroundColor = (() => {
+    const size = 5;
     const canvas = document.createElement('canvas');
-    canvas.width = 1;
-    canvas.height = 1;
+    canvas.width = size;
+    canvas.height = size;
     const context = canvas.getContext('2d') as CanvasRenderingContext2D;
     context.fillStyle = defaultBackgroundColor;
     context.beginPath();
-    context.rect(0, 0, 1, 1);
+    context.rect(0, 0, size, size);
     context.closePath();
     context.fill();
-    context.drawImage(image, 0, 0, sw, sh, 0, 0, 1, 1);
-    const imageData = context.getImageData(0, 0, 1, 1).data;
-
+    context.drawImage(image, 0, 0, sw, sh, 0, 0, size, size);
+    const imageData = context.getImageData(0, 0, size, size).data;
     const backgroundColor = getPixel(imageData, 1, 0, 0);
     canvas.width = 0;
     canvas.height = 0;
@@ -65,18 +66,19 @@ export const createColorScheme = (
   })();
   backgroundBrightness = calculateBrightness(backgroundColor); // 背景色の明度
 
-  // 取得した色は再度取得しなくてもいいようにキャッシュして使い回す
+  // 取得した色は再度取得しなくてもいいようにキャッシュして使い回しましょう
   const colors: number[] = [];
 
-  let maxBrightDistance = -1; // 最大明度差
+  // 最大明度差
+  let maxBrightDistance = -1;
 
   // 2. テキスト色を決定
-  // 背景色との明度差が一番大きいもの
+  // 背景色との明度差が一番大きいものを抽出する
   textColor = (() => {
     let textColor = 0x000000;
-    for (let x = 0; x < dw; x += 1) {
-      for (let y = 0; y < dh; y += 1) {
-        const color = getPixel(imageData, dw, x, y);
+    for (let x = 0; x < dw; x += 3) {
+      for (let y = 0; y < dh; y += 3) {
+        const color = getPixel(destImageData, dw, x, y);
         colors.push(color);
         const brightness = calculateBrightness(color);
         if (
@@ -128,16 +130,14 @@ export const createColorScheme = (
         }
       }
 
-      if (titleColorMatched) {
-        break;
-      }
+      if (titleColorMatched) break;
     }
 
     // 背景色とタイトル色の明度差が小さければ適当な色を入れておく
     if (
       Math.abs(calculateBrightness(titleColor) - backgroundBrightness) <= 32
     ) {
-      titleColor = backgroundBrightness < 128 ? 0xcccccc : 0x333333;
+      titleColor = backgroundBrightness < 128 ? 0xdddddd : 0x222222;
     }
 
     return titleColor;
@@ -148,7 +148,6 @@ export const createColorScheme = (
   canvas.height = 0;
 
   return {
-    image,
     backgroundColor,
     backgroundBrightness,
     titleColor,
@@ -156,12 +155,9 @@ export const createColorScheme = (
   };
 };
 
-// 明度を計算する
-function calculateBrightness(color: number): number {
-  const r = (color >> 16) & 0xff;
-  const g = (color >> 8) & 0xff;
-  const b = color & 0xff;
-  return Math.round((r + g + b) / 3);
+// RGB を数字に変換
+function rgb2int(r: number, g: number, b: number) {
+  return (r << 16) + (g << 8) + b;
 }
 
 // ImageData から色を取得する
@@ -177,4 +173,37 @@ function getPixel(
   const b = imageData[index + 2];
 
   return rgb2int(r, g, b);
+}
+
+// 明度を計算する
+function calculateBrightness(color: number) {
+  const r = (color >> 16) & 0xff;
+  const g = (color >> 8) & 0xff;
+  const b = color & 0xff;
+  return Math.round((r + g + b) / 3);
+}
+
+// ポスタライズ
+function posterize(
+  source: Uint8ClampedArray,
+  dest: Uint8ClampedArray,
+  width: number,
+  height: number,
+  level = 5,
+) {
+  const n = width * height * 4;
+  const numLevels = clamp(level, 2, 256);
+  const numAreas = 256 / numLevels;
+  const numValues = 256 / (numLevels - 1);
+
+  for (let i = 0; i < n; i += 4) {
+    dest[i] = numValues * ((source[i] / numAreas) >> 0);
+    dest[i + 1] = numValues * ((source[i + 1] / numAreas) >> 0);
+    dest[i + 2] = numValues * ((source[i + 2] / numAreas) >> 0);
+    dest[i + 3] = source[i + 3];
+  }
+}
+
+function clamp(val: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, val));
 }
