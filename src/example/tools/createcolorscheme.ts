@@ -1,11 +1,10 @@
 export const createColorScheme = (
-  image:
+  source:
     | HTMLImageElement
     | HTMLVideoElement
     | HTMLCanvasElement
     | ImageBitmap
     | OffscreenCanvas,
-  defaultBackgroundColor = '#fff',
 ) => {
   // これらの色を見つけます
   let backgroundColor = 0xffffff;
@@ -14,8 +13,8 @@ export const createColorScheme = (
   let textColor = 0x000000;
 
   // ソースの幅と高さ
-  const sw = image.width;
-  const sh = image.height;
+  const sw = source.width;
+  const sh = source.height;
 
   // 処理しやすいように最大150x150にリサイズする
   const scale = Math.min(1, Math.min(150 / sw, 150 / sh));
@@ -23,6 +22,9 @@ export const createColorScheme = (
   // 作業用画像の幅と高さ
   const dw = Math.floor(sw * scale);
   const dh = Math.floor(sh * scale);
+
+  // 下地
+  const baseColor = '#fff';
 
   // canvas を用意
   const canvas = document.createElement('canvas');
@@ -32,14 +34,14 @@ export const createColorScheme = (
 
   // defaultBackgroundColorで塗りつぶす
   // 透明かもしれないからね
-  context.fillStyle = defaultBackgroundColor;
+  context.fillStyle = baseColor;
   context.beginPath();
   context.rect(0, 0, dw, dh);
   context.closePath();
   context.fill();
 
   // canvas に転写
-  context.drawImage(image, 0, 0, sw, sh, 0, 0, dw, dh);
+  context.drawImage(source, 0, 0, sw, sh, 0, 0, dw, dh);
   const sourceImageData = context.getImageData(0, 0, dw, dh).data;
   const destImageData = Uint8ClampedArray.from(sourceImageData);
   posterize(sourceImageData, destImageData, dw, dh, 5);
@@ -52,12 +54,12 @@ export const createColorScheme = (
     canvas.width = size;
     canvas.height = size;
     const context = canvas.getContext('2d') as CanvasRenderingContext2D;
-    context.fillStyle = defaultBackgroundColor;
+    context.fillStyle = baseColor;
     context.beginPath();
     context.rect(0, 0, size, size);
     context.closePath();
     context.fill();
-    context.drawImage(image, 0, 0, sw, sh, 0, 0, size, size);
+    context.drawImage(source, 0, 0, sw, sh, 0, 0, size, size);
     const imageData = context.getImageData(0, 0, size, size).data;
     const backgroundColor = getPixel(imageData, 1, 0, 0);
     canvas.width = 0;

@@ -27,7 +27,6 @@ export const MainView = () => {
 
       const { backgroundColor, titleColor, textColor } = createColorScheme(
         image,
-        '#000',
       );
       setBackgroundColor(disassemblyColor(backgroundColor).hex);
       setTitleColor(disassemblyColor(titleColor).hex);
@@ -51,7 +50,6 @@ export const MainView = () => {
 
         const { backgroundColor, titleColor, textColor } = createColorScheme(
           image,
-          '#000',
         );
         setBackgroundColor(disassemblyColor(backgroundColor).hex);
         setTitleColor(disassemblyColor(titleColor).hex);
