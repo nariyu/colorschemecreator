@@ -15,7 +15,6 @@ export const MainView = () => {
   const [backgroundColor, setBackgroundColor] = useState('#fff');
   const [titleColor, setTitleColor] = useState('#000');
   const [textColor, setTextColor] = useState('#000');
-  const [borderColor, setBorderColor] = useState('rgba(0, 0, 0, 0.2)');
   const [paddingTop, setPaddingTop] = useState('100%');
 
   useEffect(() => {
@@ -33,7 +32,6 @@ export const MainView = () => {
 
       const tColor = disassemblyColor(textColor);
       setTextColor(tColor.hex);
-      setBorderColor(`rgba(${tColor.r}, ${tColor.g}, ${tColor.b}, 0.3)`);
     };
     image.src = '/favicons/android-chrome-256x256.png';
   }, []);
@@ -56,17 +54,20 @@ export const MainView = () => {
 
         const tColor = disassemblyColor(textColor);
         setTextColor(tColor.hex);
-        setBorderColor(`rgba(${tColor.r}, ${tColor.g}, ${tColor.b}, 0.3)`);
       } catch (error) {
         console.error(error);
       }
     })();
   }, []);
 
+  useEffect(() => {
+    document.documentElement.style.backgroundColor = backgroundColor;
+    document.documentElement.style.color = textColor;
+  }, [backgroundColor, textColor]);
+
   return (
     <div
       className={styles.component}
-      style={{ backgroundColor, borderColor, color: textColor }}
       onDragOver={(event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -119,11 +120,11 @@ export const MainView = () => {
       </div>
 
       <p className={styles.colors}>
-        background color: {backgroundColor}
+        background: {backgroundColor}
         <br />
-        title color: {titleColor}
+        title: {titleColor}
         <br />
-        text color: {textColor}
+        text: {textColor}
       </p>
     </div>
   );

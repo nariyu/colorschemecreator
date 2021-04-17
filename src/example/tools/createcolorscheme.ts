@@ -8,8 +8,7 @@ export const createColorScheme = (
 ) => {
   // これらの色を見つけます
   let backgroundColor = 0xffffff;
-  let backgroundBrightness = 1;
-  let titleColor = 0x000000;
+  let titleColor = 0x555555;
   let textColor = 0x000000;
 
   // ソースの幅と高さ
@@ -31,6 +30,8 @@ export const createColorScheme = (
   canvas.width = dw;
   canvas.height = dh;
   const context = canvas.getContext('2d') as CanvasRenderingContext2D;
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = 'high';
 
   // defaultBackgroundColorで塗りつぶす
   // 透明かもしれないからね
@@ -66,7 +67,7 @@ export const createColorScheme = (
     canvas.height = 0;
     return backgroundColor;
   })();
-  backgroundBrightness = calculateBrightness(backgroundColor); // 背景色の明度
+  const backgroundBrightness = calculateBrightness(backgroundColor); // 背景色の明度
 
   // 取得した色は再度取得しなくてもいいようにキャッシュして使い回しましょう
   const colors: number[] = [];
@@ -82,6 +83,7 @@ export const createColorScheme = (
       for (let y = 0; y < dh; y += 3) {
         const color = getPixel(destImageData, dw, x, y);
         colors.push(color);
+
         const brightness = calculateBrightness(color);
         if (
           maxBrightDistance == -1 ||
@@ -102,7 +104,7 @@ export const createColorScheme = (
 
   // 3. タイトル色を決定
   // 背景色とテキスト色との明度差の50%前後にある色をタイトル色にする
-  // 最初は 50%±5 の範囲で探して、見つからない場合は閾値5ポイントずつ広げながら見つけていく
+  // 最初は 50%±5 の範囲で探して、見つからない場合は5ポイントずつ広げながら見つけていく
   titleColor = (() => {
     let titleColor = 0x000000;
 
@@ -151,7 +153,6 @@ export const createColorScheme = (
 
   return {
     backgroundColor,
-    backgroundBrightness,
     titleColor,
     textColor,
   };
