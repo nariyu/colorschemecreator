@@ -18,6 +18,8 @@
 
   .text {
     flex: 1;
+    position: relative;
+    z-index: 2;
     padding: 2rem;
 
     .title {
@@ -32,6 +34,7 @@
     flex: 1;
 
     position: relative;
+    z-index: 1;
     width: 300px;
     margin: 0 0 0 1rem;
 
@@ -48,7 +51,7 @@
       top: 0;
       left: 0;
       bottom: 0;
-      width: 70%;
+      width: 10rem;
       pointer-events: none;
       transition: background 0.2s linear 0s;
     }
@@ -87,10 +90,11 @@
     flex-direction: column;
 
     .image {
-      margin: 0 auto;
+      margin: -2rem auto 0;
       .shadow {
         width: 100%;
-        bottom: 50%;
+        bottom: auto;
+        height: 5rem;
       }
     }
   }
