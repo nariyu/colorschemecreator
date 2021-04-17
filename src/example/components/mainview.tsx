@@ -61,8 +61,12 @@ export const MainView = () => {
   }, []);
 
   useEffect(() => {
+    document.documentElement.style.setProperty(
+      '--color-background',
+      backgroundColor,
+    );
+    document.documentElement.style.setProperty('--color-text', textColor);
     document.documentElement.style.backgroundColor = backgroundColor;
-    document.documentElement.style.color = textColor;
   }, [backgroundColor, textColor]);
 
   return (
