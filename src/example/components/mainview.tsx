@@ -1,5 +1,5 @@
 import { createColorScheme } from 'example/tools/createcolorscheme';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { disassemblyColor } from 'shared/utils/colorutil';
 import { blobToImage } from 'shared/utils/imageutil';
 import { useWindowState } from '../hooks/usewindowstate';
@@ -9,7 +9,7 @@ import styles from './mainview.module.scss';
  * MainView
  */
 export const MainView = () => {
-  useWindowState();
+  const windowSize = useWindowState();
 
   const [imageUrl, setImageUrl] = useState('');
   const [backgroundColor, setBackgroundColor] = useState('#fff');
@@ -69,6 +69,15 @@ export const MainView = () => {
     document.documentElement.style.backgroundColor = backgroundColor;
   }, [backgroundColor, textColor]);
 
+  // アートワークのシャドウ
+  const artworkShadow = useMemo(() => {
+    const bg = parseInt(backgroundColor.replace('#', '0x'), 16);
+    const { r: bgR, g: bgG, b: bgB } = disassemblyColor(bg);
+    return `linear-gradient(${
+      process.browser && windowSize.width > 500 ? 90 : 180
+    }deg, rgba(${bgR}, ${bgG}, ${bgB}, 1), rgba(${bgR}, ${bgG}, ${bgB}, 0))`;
+  }, [backgroundColor]);
+
   return (
     <div
       className={styles.component}
@@ -86,43 +95,50 @@ export const MainView = () => {
         uploadFile(file);
       }}
     >
-      <h1 className={styles.title} style={{ color: titleColor }}>
-        Color Scheme Creator
-      </h1>
+      <div className={styles.content}>
+        <div className={styles.text}>
+          <h1 className={styles.title} style={{ color: titleColor }}>
+            Color Scheme from Image
+          </h1>
 
-      <div
-        className={styles.image}
-        style={{
-          backgroundImage: imageUrl ? `url(${imageUrl})` : undefined,
-          boxShadow: `0 0 1rem ${backgroundColor} inset, 0 0 1rem ${backgroundColor} inset, 0 0 1rem ${backgroundColor} inset, 0 0 1rem ${backgroundColor} inset, 0 0 1rem ${backgroundColor} inset, 0 0 1rem ${backgroundColor} inset`,
-        }}
-      >
-        <div className={styles.measure} style={{ paddingTop }} />
-        <input
-          type="file"
-          accept="image/png, image/jpeg"
-          className={styles.inputFile}
-          onChange={(event) => {
-            const file = event.currentTarget.files
-              ? event.currentTarget.files[0]
-              : null;
-            if (file) {
-              uploadFile(file);
-            }
+          <p>
+            画像をドロップするか画像をタップして変更すると、その画像からいい感じに背景・タイトル・テキストの色を作ります。
+          </p>
+          <p lang="en">
+            Drop an image or tap an image to change it, and it will create a
+            nice background color, title color, and text color from that image.
+          </p>
+        </div>
+
+        <div
+          className={styles.image}
+          style={{
+            backgroundImage: imageUrl ? `url(${imageUrl})` : undefined,
+            boxShadow: `0 0 1rem ${backgroundColor} inset, 0 0 1rem ${backgroundColor} inset, 0 0 1rem ${backgroundColor} inset, 0 0 1rem ${backgroundColor} inset, 0 0 1rem ${backgroundColor} inset, 0 0 1rem ${backgroundColor} inset`,
           }}
-        />
+        >
+          <div
+            className={styles.shadow}
+            style={{
+              background: `${artworkShadow}, ${artworkShadow}`,
+            }}
+          />
+          <div className={styles.measure} style={{ paddingTop }} />
+          <input
+            type="file"
+            accept="image/png, image/jpeg"
+            className={styles.inputFile}
+            onChange={(event) => {
+              const file = event.currentTarget.files
+                ? event.currentTarget.files[0]
+                : null;
+              if (file) {
+                uploadFile(file);
+              }
+            }}
+          />
+        </div>
       </div>
-
-      <div className={styles.text}>
-        <p>
-          画像をドロップすると、その画像からいい感じに背景・タイトル・テキストの色を作ります。
-        </p>
-        <p lang="en">
-          When you drop an image, it will create a nice background color, title
-          color, and text color from the image.
-        </p>
-      </div>
-
       <p className={styles.colors}>
         background: {backgroundColor}
         <br />
