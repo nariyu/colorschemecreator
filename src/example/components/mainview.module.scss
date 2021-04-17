@@ -13,8 +13,7 @@
 
 .image {
   position: relative;
-  width: 200px;
-  height: 200px;
+  width: 300px;
   margin: 1rem auto;
 
   background: #000 none no-repeat center center;
@@ -23,8 +22,13 @@
 
   overflow: hidden;
 
+  .measure {
+    position: relative;
+  }
+
   .inputFile {
     position: absolute;
+    z-index: 100;
     top: 0;
     left: 0;
     width: 100%;

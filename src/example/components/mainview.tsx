@@ -16,11 +16,14 @@ export const MainView = () => {
   const [titleColor, setTitleColor] = useState('#000');
   const [textColor, setTextColor] = useState('#000');
   const [borderColor, setBorderColor] = useState('rgba(0, 0, 0, 0.2)');
+  const [paddingTop, setPaddingTop] = useState('100%');
 
   useEffect(() => {
     const image = new Image();
     image.onload = () => {
       setImageUrl(image.src);
+
+      setPaddingTop(`${(image.height / image.width) * 100}%`);
 
       const { backgroundColor, titleColor, textColor } = createColorScheme(
         image,
@@ -43,6 +46,8 @@ export const MainView = () => {
       try {
         const image = await blobToImage(file);
         setImageUrl(image.src);
+
+        setPaddingTop(`${(image.height / image.width) * 100}%`);
 
         const { backgroundColor, titleColor, textColor } = createColorScheme(
           image,
@@ -89,6 +94,7 @@ export const MainView = () => {
           boxShadow: `0 0 1rem ${backgroundColor} inset, 0 0 1rem ${backgroundColor} inset, 0 0 1rem ${backgroundColor} inset, 0 0 1rem ${backgroundColor} inset, 0 0 1rem ${backgroundColor} inset, 0 0 1rem ${backgroundColor} inset`,
         }}
       >
+        <div className={styles.measure} style={{ paddingTop }} />
         <input
           type="file"
           accept="image/png, image/jpeg"
@@ -109,17 +115,17 @@ export const MainView = () => {
           画像をドロップすると、その画像からいい感じに背景・タイトル・テキストの色を作ります。
         </p>
         <p lang="en">
-          When you drop an image, it will create a nice background, title, and
-          text color from the image.
+          When you drop an image, it will create a nice background color, title
+          color, and text color from the image.
         </p>
       </div>
 
       <p className={styles.colors}>
-        background: {backgroundColor}
+        background color: {backgroundColor}
         <br />
-        title: {titleColor}
+        title color: {titleColor}
         <br />
-        color: {textColor}
+        text color: {textColor}
       </p>
     </div>
   );
