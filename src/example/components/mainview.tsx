@@ -1,6 +1,6 @@
 import { createColorScheme } from 'example/tools/createcolorscheme';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { disassemblyColor } from 'shared/utils/colorutil';
+import { color2rgb } from 'shared/utils/colorutil';
 import { blobToImage } from 'shared/utils/imageutil';
 import { useWindowState } from '../hooks/usewindowstate';
 import styles from './mainview.module.scss';
@@ -27,10 +27,10 @@ export const MainView = () => {
       const { backgroundColor, titleColor, textColor } = createColorScheme(
         image,
       );
-      setBackgroundColor(disassemblyColor(backgroundColor).hex);
-      setTitleColor(disassemblyColor(titleColor).hex);
+      setBackgroundColor(color2rgb(backgroundColor).hex);
+      setTitleColor(color2rgb(titleColor).hex);
 
-      const tColor = disassemblyColor(textColor);
+      const tColor = color2rgb(textColor);
       setTextColor(tColor.hex);
     };
     image.src = '/favicons/android-chrome-256x256.png';
@@ -49,10 +49,10 @@ export const MainView = () => {
         const { backgroundColor, titleColor, textColor } = createColorScheme(
           image,
         );
-        setBackgroundColor(disassemblyColor(backgroundColor).hex);
-        setTitleColor(disassemblyColor(titleColor).hex);
+        setBackgroundColor(color2rgb(backgroundColor).hex);
+        setTitleColor(color2rgb(titleColor).hex);
 
-        const tColor = disassemblyColor(textColor);
+        const tColor = color2rgb(textColor);
         setTextColor(tColor.hex);
       } catch (error) {
         console.error(error);
@@ -72,7 +72,7 @@ export const MainView = () => {
   // アートワークのシャドウ
   const artworkShadow = useMemo(() => {
     const bg = parseInt(backgroundColor.replace('#', '0x'), 16);
-    const { r: bgR, g: bgG, b: bgB } = disassemblyColor(bg);
+    const { r: bgR, g: bgG, b: bgB } = color2rgb(bg);
     return `linear-gradient(${
       process.browser && windowSize.width > 500 ? 90 : 180
     }deg, rgba(${bgR}, ${bgG}, ${bgB}, 1), rgba(${bgR}, ${bgG}, ${bgB}, 0))`;
