@@ -5,6 +5,27 @@ import {
 } from 'shared/utils/colorutil';
 import { posterize } from 'shared/utils/imageutil';
 
+export interface CreateColorSchemeOptions {
+  baseColor: string;
+  posterizeLevel: number;
+  backgroundSegment: number;
+  backgroundMinBrightness: number;
+  backgroundMaxBrightness: number;
+  investigationStep: number;
+  textMinHueDistance: number;
+  titleDetectBrightnessThreshold: number;
+}
+export const defaultCreateColorSchemeOptions: CreateColorSchemeOptions = {
+  baseColor: '#fff',
+  posterizeLevel: 10,
+  backgroundSegment: 16,
+  backgroundMinBrightness: 32,
+  backgroundMaxBrightness: 0xff - 32,
+  investigationStep: 30,
+  textMinHueDistance: 30,
+  titleDetectBrightnessThreshold: 0.25,
+};
+
 export const createColorScheme = (
   source:
     | HTMLImageElement
@@ -12,7 +33,10 @@ export const createColorScheme = (
     | HTMLCanvasElement
     | ImageBitmap
     | OffscreenCanvas,
+  options?: Partial<CreateColorSchemeOptions>,
 ) => {
+  const opts = { ...defaultCreateColorSchemeOptions, ...options };
+
   // これらの色を見つけます
   let backgroundColor = 0xffffff;
   let titleColor = 0x555555;
@@ -29,9 +53,6 @@ export const createColorScheme = (
   const dw = Math.floor(sw * scale);
   const dh = Math.floor(sh * scale);
 
-  // 下地
-  const baseColor = '#fff';
-
   // canvas を用意
   const canvas = document.createElement('canvas');
   canvas.width = dw;
@@ -41,8 +62,8 @@ export const createColorScheme = (
   context.imageSmoothingQuality = 'high';
 
   // defaultBackgroundColorで塗りつぶす
-  // 透明かもしれないからね
-  context.fillStyle = baseColor;
+  // 透明かもしれないから
+  context.fillStyle = opts.baseColor;
   context.beginPath();
   context.rect(0, 0, dw, dh);
   context.closePath();
@@ -52,29 +73,32 @@ export const createColorScheme = (
   context.drawImage(source, 0, 0, sw, sh, 0, 0, dw, dh);
   const sourceImageData = context.getImageData(0, 0, dw, dh).data;
   const destImageData = Uint8ClampedArray.from(sourceImageData);
-  posterize(sourceImageData, destImageData, dw, dh, 5);
+  posterize(sourceImageData, destImageData, dw, dh, opts.posterizeLevel);
 
   // 1. 背景色を決定
   // 雑だけど小さくリサイズして左上の色をとります。
   backgroundColor = (() => {
-    const size = 9;
+    const segment = opts.backgroundSegment;
     const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
+    canvas.width = segment;
+    canvas.height = segment;
     const context = canvas.getContext('2d') as CanvasRenderingContext2D;
-    context.fillStyle = baseColor;
+    context.fillStyle = opts.baseColor;
     context.beginPath();
-    context.rect(0, 0, size, size);
+    context.rect(0, 0, segment, segment);
     context.closePath();
     context.fill();
-    context.drawImage(source, 0, 0, sw, sh, 0, 0, size, size);
-    const imageData = context.getImageData(0, 0, size, size).data;
+    context.drawImage(source, 0, 0, sw, sh, 0, 0, segment, segment);
+    const imageData = context.getImageData(0, 0, segment, segment).data;
 
-    for (let x = 0; x < size; x++) {
-      for (let y = 0; y < size; y++) {
+    for (let x = 1; x < segment; x++) {
+      for (let y = 1; y < segment; y++) {
         const backgroundColor = getPixel(imageData, 1, x, y);
         const backgroundBrightness = calculateBrightness(backgroundColor);
-        if (backgroundBrightness < 64 || backgroundBrightness > 192) {
+        if (
+          backgroundBrightness < opts.backgroundMinBrightness ||
+          backgroundBrightness > opts.backgroundMaxBrightness
+        ) {
           canvas.width = 0;
           canvas.height = 0;
           return backgroundColor;
@@ -88,99 +112,85 @@ export const createColorScheme = (
     return backgroundColor;
   })();
   const backgroundBrightness = calculateBrightness(backgroundColor);
-  const isDark = backgroundBrightness < 128;
+  const backgroundHue = color2hsv(backgroundColor).h;
+  const isDark = backgroundBrightness < 0xff / 2;
 
-  // 取得した色は再度取得しなくてもいいようにキャッシュして使い回しましょう
-  const colors: number[] = [];
+  // 2. テキストとタイトルの候補になる色を抽出する
+  const colorsDic: {
+    [key: string]: { brightness: number; color: number; count: number };
+  } = {};
 
-  // 最大明度差
-  let textBrightDistance = -1;
+  // 全部捜査すると膨大になるから間引く
+  const stepX = Math.ceil(Math.max(1, dw / opts.investigationStep));
+  const stepY = Math.ceil(Math.max(1, dh / opts.investigationStep));
 
-  // 2. テキスト色を決定
-  // 背景色との明度差が一番大きいものを抽出する
-  textColor = (() => {
-    let textColor = 0x000000;
+  let maxCount = 0;
 
-    // 全部捜査すると膨大になるから間引く
-    const stepX = Math.ceil(Math.max(1, dw / 30));
-    const stepY = Math.ceil(Math.max(1, dh / 30));
+  for (let x = 0; x < dw; x += stepX) {
+    for (let y = 0; y < dh; y += stepY) {
+      const color = getPixel(destImageData, dw, x, y);
+      if (isNaN(color) || color === 0x000000 || color === 0xffffff) continue;
+      const brightness = calculateBrightness(color);
+      if (isDark && brightness < 0xff * 0.3) continue;
+      if (!isDark && brightness >= 0xff * 0.7) continue;
 
-    for (let x = 0; x < dw; x += stepX) {
-      for (let y = 0; y < dh; y += stepY) {
-        const color = getPixel(destImageData, dw, x, y);
-        if (isNaN(color) || color === 0x000000 || color === 0xffffff) continue;
+      const hue = color2hsv(color).h;
+      const hueDistance = Math.abs(backgroundHue - hue);
+      if (hueDistance < opts.textMinHueDistance) continue;
 
-        colors.push(color);
-
-        const textBrightness = calculateBrightness(color);
-        if (textBrightness > 238 || textBrightness < 16) continue;
-        if (isDark && textBrightness < 64) continue;
-        if (!isDark && textBrightness >= 192) continue;
-
-        if (
-          textBrightDistance == -1 ||
-          Math.abs(backgroundBrightness - textBrightness) > textBrightDistance
-        ) {
-          textBrightDistance = Math.abs(backgroundBrightness - textBrightness);
-          textColor = color;
-        }
+      if (colorsDic[color]) {
+        colorsDic[color].count++;
+        maxCount = Math.max(colorsDic[color].count);
+      } else {
+        colorsDic[color] = {
+          brightness,
+          color,
+          count: 1,
+        };
       }
     }
+  }
 
-    // 背景色とテキスト色の明度差が小さければ適当な色を入れておく
-    if (Math.abs(calculateBrightness(textColor) - backgroundBrightness) <= 16) {
-      textColor = backgroundBrightness < 128 ? 0xffffff : 0x000000;
+  // 使用する色をフィルタリングする
+  const colors = Object.values(colorsDic).filter(
+    (color) => color.count <= maxCount * 0.7,
+  );
+
+  // 明度で並び替える
+  if (isDark) colors.sort((a, b) => a.brightness - b.brightness);
+  else colors.sort((a, b) => b.brightness - a.brightness);
+
+  // 3. テキスト色を決定
+  // 背景色との明度差が一番大きいものを抽出する
+  textColor = (() => {
+    let textColor = isDark ? 0xffffff : 0x000000;
+
+    if (colors.length > 0) {
+      textColor = colors[colors.length - 1].color;
     }
 
     return textColor;
   })();
 
-  // 3. タイトル色を決定
-  // 背景色とテキスト色との明度差の50%前後にある色をタイトル色にする
-  // 最初は 50%±5 の範囲で探して、見つからない場合は5ポイントずつ広げながら見つけていく
+  // 4. タイトル色を決定
   titleColor = (() => {
-    let titleColor = 0x000000;
+    let titleColor = textColor;
 
-    const defaultBrightnessThreshold = 0.5;
+    if (colors.length > 0) {
+      const textHue = color2hsv(textColor).h;
 
-    const textHue = color2hsv(textColor).h;
-
-    for (
-      let threshold = 0.05;
-      threshold < defaultBrightnessThreshold;
-      threshold += 0.05
-    ) {
-      let titleColorMatched = false;
-
-      for (let i = colors.length - 1; i >= 0; i--) {
+      const index = Math.floor(
+        colors.length * opts.titleDetectBrightnessThreshold,
+      );
+      for (let i = index; i >= 0; i--) {
         const color = colors[i];
-        const brightness = calculateBrightness(color);
-        const brightnessDistance = Math.abs(backgroundBrightness - brightness);
-
-        const titleHue = color2hsv(color).h;
+        const titleHue = color2hsv(color.color).h;
         const hueDisatnce = Math.abs(textHue - titleHue);
-        if (
-          hueDisatnce >= 25 &&
-          titleHue > 32 &&
-          brightnessDistance >
-            textBrightDistance * defaultBrightnessThreshold &&
-          brightnessDistance <
-            textBrightDistance * (defaultBrightnessThreshold + threshold)
-        ) {
-          titleColor = color;
-          titleColorMatched = true;
+        if (hueDisatnce >= opts.textMinHueDistance) {
+          titleColor = color.color;
           break;
         }
-
-        if (titleColorMatched) break;
       }
-    }
-
-    // 背景色とタイトル色の明度差が小さければ適当な色を入れておく
-    if (
-      Math.abs(calculateBrightness(titleColor) - backgroundBrightness) <= 32
-    ) {
-      titleColor = backgroundBrightness < 128 ? 0xdddddd : 0x222222;
     }
 
     return titleColor;
