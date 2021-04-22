@@ -173,28 +173,34 @@ export const createColorScheme = (
 
   // 4. タイトル色を決定
   titleColor = (() => {
-    let titleColor = textColor;
-
     if (colors.length > 0) {
       const textHue = color2hsv(textColor).h;
 
       // 使用率で並び替え
       colors.sort((a, b) => b.count - a.count);
 
-      const startIndex = Math.floor(colors.length * 0.05);
+      const startIndex = Math.floor(colors.length * 0.15);
 
-      for (let i = startIndex; i < colors.length; i++) {
-        const color = colors[i];
+      const filteredColors = colors.filter((color) => {
+        const brightnessDistance = Math.abs(
+          color.brightness - backgroundBrightness,
+        );
+        return brightnessDistance > 64;
+      });
+      for (let i = startIndex; i < filteredColors.length; i++) {
+        const color = filteredColors[i];
         const titleHue = color2hsv(color.color).h;
         const hueDisatnce = Math.abs(textHue - titleHue);
         if (hueDisatnce >= opts.textMinHueDistance) {
-          titleColor = color.color;
-          break;
+          return color.color;
         }
       }
+
+      return filteredColors[startIndex].color;
     }
 
-    return titleColor;
+    console.log('TITLE COLOR NOT FOUND');
+    return textColor;
   })();
 
   // 開放
