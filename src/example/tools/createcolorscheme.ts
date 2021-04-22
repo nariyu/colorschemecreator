@@ -17,8 +17,8 @@ export interface CreateColorSchemeOptions {
 }
 export const defaultCreateColorSchemeOptions: CreateColorSchemeOptions = {
   baseColor: '#fff',
-  posterizeLevel: 10,
-  backgroundSegment: 16,
+  posterizeLevel: 20,
+  backgroundSegment: 13,
   backgroundMinBrightness: 32,
   backgroundMaxBrightness: 0xff - 32,
   investigationStep: 30,
@@ -76,7 +76,7 @@ export const createColorScheme = (
   posterize(sourceImageData, destImageData, dw, dh, opts.posterizeLevel);
 
   // 1. 背景色を決定
-  // 雑だけど小さくリサイズして左上の色をとります。
+  // 雑だけど小さくリサイズして左上の色をとる
   backgroundColor = (() => {
     const segment = opts.backgroundSegment;
     const canvas = document.createElement('canvas');
@@ -124,8 +124,6 @@ export const createColorScheme = (
   const stepX = Math.ceil(Math.max(1, dw / opts.investigationStep));
   const stepY = Math.ceil(Math.max(1, dh / opts.investigationStep));
 
-  let maxCount = 0;
-
   for (let x = 0; x < dw; x += stepX) {
     for (let y = 0; y < dh; y += stepY) {
       const color = getPixel(destImageData, dw, x, y);
@@ -140,7 +138,6 @@ export const createColorScheme = (
 
       if (colorsDic[color]) {
         colorsDic[color].count++;
-        maxCount = Math.max(colorsDic[color].count);
       } else {
         colorsDic[color] = {
           brightness,
@@ -152,8 +149,10 @@ export const createColorScheme = (
   }
 
   // 使用する色をフィルタリングする
+  // 使用率が10%以下の色は使用しない
+  const colorCount = Object.keys(colorsDic).length;
   const colors = Object.values(colorsDic).filter(
-    (color) => color.count <= maxCount * 0.7,
+    (color) => color.count <= colorCount * 0.1,
   );
 
   // 明度で並び替える
@@ -179,10 +178,12 @@ export const createColorScheme = (
     if (colors.length > 0) {
       const textHue = color2hsv(textColor).h;
 
-      const index = Math.floor(
-        colors.length * opts.titleDetectBrightnessThreshold,
-      );
-      for (let i = index; i >= 0; i--) {
+      // 使用率で並び替え
+      colors.sort((a, b) => b.count - a.count);
+
+      const startIndex = Math.floor(colors.length * 0.05);
+
+      for (let i = startIndex; i < colors.length; i++) {
         const color = colors[i];
         const titleHue = color2hsv(color.color).h;
         const hueDisatnce = Math.abs(textHue - titleHue);
